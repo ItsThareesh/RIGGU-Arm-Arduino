@@ -43,39 +43,20 @@ public:
      */
     void begin();
     /**
-     * @brief Sends a command over UART.
-     * @param commandType The type of command to send.
-     */
-    void SendCommand(uint8_t commandType);
-    /**
-     * @brief Sends data over UART.
-     * @param data Pointer to the data array to send.
-     * @param length Length of the data array.
-     */
-    void SendData(byte *data, uint8_t length);
-    /**
-     * @brief Reads a command from UART with a timeout.
-     * @param commandType Reference to store the received command type.
-     * @param timeout Timeout duration in milliseconds.
+     * @brief Reads a command over UART with a timeout.
+     * @param commandType Pointer to store the received command type.
+     * @param timeoutMs Timeout duration in milliseconds (default: 1000ms).
      * @return True if a command was successfully read, false otherwise.
      */
-    bool ReadCommand(uint8_t &commandType, uint32_t timeoutMs = 1000);
-    /**
-     * @brief Reads data from UART with a timeout.
-     * @param data Pointer to store the received data.
-     * @param length Length of the data to read.
-     * @param timeout Timeout duration in milliseconds.
-     * @return True if data was successfully read, false otherwise.
-     */
-    bool ReadData(byte *data, uint8_t length, int timeout);
+    bool readCommand(uint8_t &commandType, uint32_t timeoutMs = 1000);
     /**
      * @brief Reads data from UART.
      * @param data Pointer to store the received data.
      * @param length Length of the data to read.
      * @return True if data was successfully read, false otherwise.
      */
-    bool ReadData(byte *data, uint8_t length);
-    bool IsAvailable();
+    bool readData(byte *data, uint8_t length);
+    bool isAvailable();
 };
 
 #endif // UARTPROTOCOL_H
