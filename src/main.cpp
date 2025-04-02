@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Servo.h>
 #include "UARTProtocol.h"
+#include <TimerOne.h> // Library for timer interrupts on Arduino Mega
 
 Servo servo1;
 Servo servo2;
@@ -10,34 +11,56 @@ const int pin2 = 3;
 
 const float alpha = 0.1;
 
+// Store the target and current angles for each servo
+int targetAngle1 = 0;
+int targetAngle2 = 0;
+float currentAngle1 = 0;
+float currentAngle2 = 0;
+
+bool newCommandReceived = false;
+
 // Initialize Protocol Object
 UARTProtocol protocol(Serial, 0xaa, 10, 115200);
 
 // Smooth Movement Formula: 𝚹(new) = ⍺ * 𝚹 + (1 - ⍺) * 𝚹(current)
-void smoothExp(Servo &servo, byte targetAngle)
+void smoothExp(float &currentAngle, Servo &servo, int targetAngle)
 {
-  float currentAngle = servo.read();
-
-  while (abs(currentAngle - targetAngle) > 0.1)
+  if (abs(currentAngle - targetAngle) > 0.1)
   {
     currentAngle = alpha * targetAngle + (1 - alpha) * currentAngle;
     servo.write(int(currentAngle));
-    delay(15);
   }
-
-  servo.write(targetAngle);
+  else
+  {
+    servo.write(targetAngle);
+    currentAngle = targetAngle;
+  }
 }
 
-void moveToAngle(Servo &servo, int ID, byte receivedAngle)
+void manageServos()
 {
-  Serial.print("Moving Servo ");
-  Serial.print(ID);
-  Serial.print(" from ");
-  Serial.print(servo.read());
-  Serial.print(" to ");
-  Serial.println(receivedAngle);
+  if (newCommandReceived)
+  {
+    bool allAnglesSet = true;
+    
+    if (currentAngle1 != targetAngle1)
+    {
+      smoothExp(currentAngle1, servo1, targetAngle1);
+      allAnglesSet = false;
+    }
 
-  smoothExp(servo, receivedAngle);
+    if (currentAngle2 != targetAngle2)
+    {
+      smoothExp(currentAngle2, servo2, targetAngle2);
+      allAnglesSet = false;
+    }
+
+    if (allAnglesSet)
+    {
+      newCommandReceived = false;
+      Timer1.detachInterrupt(); // Disable the timer interrupt when no new command is received
+    }
+  }
 }
 
 void setup()
@@ -46,12 +69,13 @@ void setup()
   servo1.attach(pin1);
   servo2.attach(pin2);
 
-  // Initialize it to 0 degrees
-  servo1.write(0);
-  servo2.write(0);
+  // Initialize current and target angles using servo.read()
+  currentAngle1 = targetAngle1 = servo1.read();
+  currentAngle2 = targetAngle2 = servo2.read();
 
   protocol.begin();
-  Serial.println("All Servos Set a 0 Degrees");
+  Serial.begin(115200);
+  Serial.println("All Servos Set at Initial Positions");
 }
 
 void loop()
@@ -59,22 +83,24 @@ void loop()
   if (protocol.isAvailable())
   {
     uint8_t command;
-    byte receivedAngle;
+    int receivedAngle;
 
     if (protocol.readCommand(command))
     {
-      if (protocol.readData(&receivedAngle, 1))
+      if (protocol.readData((byte*)&receivedAngle, sizeof(int)))
       {
         receivedAngle = constrain(receivedAngle, 0, 180);
 
         if (command == 0x01)
-          moveToAngle(servo1, 1, receivedAngle);
-
+          targetAngle1 = receivedAngle;
         else if (command == 0x02)
-          moveToAngle(servo2, 2, receivedAngle);
-
+          targetAngle2 = receivedAngle;
         else if (command == 0x03)
           Serial.println("Invalid Motor ID");
+        
+        newCommandReceived = true;
+        Timer1.attachInterrupt(manageServos); // Enable the timer interrupt when a new command is received
+        Timer1.initialize(15000); // Ensure the timer is set to trigger every 15ms
       }
     }
   }
