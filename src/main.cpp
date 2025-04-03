@@ -5,15 +5,14 @@
 
 Servo servos[3];
 
-const int pin1 = 2;
-const int pin2 = 3;
-const int pin3 = 4;
+int pins[3] = {2, 3, 4};
 
-const float alpha = 0.1;
-
+int initial_angles[3] = {180, 0, 140};
 float targetAngles[3] = {0, 0, 0};
 float currentAngles[3] = {0, 0, 0};
 bool moving[3] = {false, false, false};
+
+const float alpha = 0.1;
 
 // Initialize Protocol Object
 UARTProtocol protocol(Serial, 0xaa, 10, 115200);
@@ -68,17 +67,13 @@ void moveMotorsAsync(byte angle1, byte angle2, byte angle3)
 
 void setup()
 {
-  // Set Servo Pins
-  servos[0].attach(pin1);
-  servos[1].attach(pin2);
-  servos[2].attach(pin3);
+  for (int i = 0; i < 3; i++)
+  {
+    servos[i].attach(pins[i]);
+    servos[i].write(initial_angles[i]); // Initialize it to default angles
+  }
 
-  // Initialize it to 0 degrees
-  Serial.println("All Servos Set a 0 Degrees");
-
-  servos[0].write(180);
-  servos[1].write(0);
-  servos[2].write(140);
+  Serial.println("Resetted to Initial Angles");
 
   protocol.begin();
 
@@ -96,11 +91,11 @@ void loop()
     {
       if (protocol.readData(receivedAngles, 3))
       {
-        receivedAngles[0] = constrain(receivedAngles[0], 0, 180);
+        receivedAngles[0] = constrain(receivedAngles[0], 0, initial_angles[0]);
         receivedAngles[1] = constrain(receivedAngles[1], 0, 180);
-        receivedAngles[2] = constrain(receivedAngles[2], 0, 140);
+        receivedAngles[2] = constrain(receivedAngles[2], 0, initial_angles[2]);
 
-        moveMotorsAsync(receivedAngles[0], receivedAngles[1], receivedAngles[2]);
+        moveMotorsAsync(initial_angles[0] - receivedAngles[0], receivedAngles[1], initial_angles[2] - receivedAngles[2]);
       }
     }
   }
