@@ -10,6 +10,7 @@ int pins[3] = {2, 3, 4};
 int initial_angles[3] = {180, 0, 140};
 float targetAngles[3] = {0, 0, 0};
 float currentAngles[3] = {0, 0, 0};
+
 bool moving[3] = {false, false, false};
 
 const float alpha = 0.1;
@@ -67,6 +68,9 @@ void moveMotorsAsync(byte angle1, byte angle2, byte angle3)
 
 void setup()
 {
+  protocol.begin();
+  Serial.println("UART Protocol Initialized");
+
   for (int i = 0; i < 3; i++)
   {
     currentAngles[i] = initial_angles[i]; // For the first movement, the current angle is the initial angle
@@ -76,8 +80,6 @@ void setup()
   }
 
   Serial.println("Resetted to Initial Angles");
-
-  protocol.begin();
 
   Timer1.initialize(15000); // 15 millisecond
 }
@@ -102,8 +104,18 @@ void loop()
         byte target1 = constrain(receivedAngles[1], 0, 180);                     // Side shoulder
         byte target2 = constrain(initial_angles[2] - receivedAngles[2], 0, 180); // Elbow
 
-        moveMotorsAsync(initial_angles[0] - receivedAngles[0], receivedAngles[1], initial_angles[2] - receivedAngles[2]);
+        moveMotorsAsync(initial_angles[0] - receivedAngles[0],
+                        receivedAngles[1],
+                        initial_angles[2] - receivedAngles[2]);
       }
+      else
+      {
+        Serial.println("Failed to read angles.");
+      }
+    }
+    else
+    {
+      Serial.println("Failed to read command.");
     }
   }
 }
