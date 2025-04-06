@@ -69,6 +69,8 @@ void setup()
 {
   for (int i = 0; i < 3; i++)
   {
+    currentAngles[i] = initial_angles[i]; // For the first movement, the current angle is the initial angle
+
     servos[i].attach(pins[i]);
     servos[i].write(initial_angles[i]); // Initialize it to default angles
   }
@@ -89,11 +91,16 @@ void loop()
 
     if (protocol.readCommand(command))
     {
+      Serial.println(__TIMESTAMP__);
+      Serial.print("Received Command: ");
+      Serial.println(command);
+
       if (protocol.readData(receivedAngles, 3))
       {
-        receivedAngles[0] = constrain(receivedAngles[0], 0, initial_angles[0]);
-        receivedAngles[1] = constrain(receivedAngles[1], 0, 180);
-        receivedAngles[2] = constrain(receivedAngles[2], 0, initial_angles[2]);
+        // Restrain the angles to the range of the servos
+        byte target0 = constrain(initial_angles[0] - receivedAngles[0], 0, 180); // Front shoulder
+        byte target1 = constrain(receivedAngles[1], 0, 180);                     // Side shoulder
+        byte target2 = constrain(initial_angles[2] - receivedAngles[2], 0, 180); // Elbow
 
         moveMotorsAsync(initial_angles[0] - receivedAngles[0], receivedAngles[1], initial_angles[2] - receivedAngles[2]);
       }
